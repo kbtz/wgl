@@ -1,4 +1,4 @@
-#!/usr/bin/env -S gawk -f
+#!/bin/gawk -f
 @load "filefuncs"
 
 BEGIN {
@@ -20,7 +20,7 @@ BEGIN {
 }
 
 $0 ~ "^declare var " wg 2 rc ": {" ||
-$0 ~ "^interface " wg rc "Base {" || # TODO ensure to be last block read
+$0 ~ "^interface " wg rc "Base {" ||
 $0 ~ "^interface " wg 2 rc "(Base|Overloads) {" { 
 	inside = 1
 	next
@@ -39,7 +39,7 @@ inside && $1 == "readonly" {
 	uniq[$0]++
 }
 
-inside && $1 ~ "[[:alnum:]]*\\(" {
+inside && $1 ~ "[[:alnum:]]+\\(" {
 	$1 = "function " $1
 	uniq[$0]++
 }

@@ -1,0 +1,8 @@
+{
+	"name": "@kbtz/wgl",
+	"version": "0.1.0",
+	"description": "TBD",
+	"main": "index.ts",
+	"author": "kbtz <contact@kbtz.dev>",
+	"license": "Unlicense"
+}
