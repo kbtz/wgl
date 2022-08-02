@@ -1,16 +1,14 @@
+import '@kbtz/hax/maps'
+import '@kbtz/hax/merge'
+import '@kbtz/hax/proxies'
+
 import { With } from '@kbtz/hax/with'
-import '@kbtz/hax/record'
+import { header, vertexes } from './defaults'
 
-import defaults from './defaults'
-
-type Context = WebGL2RenderingContext
-type Location = WebGLUniformLocation
 type Uniform = Ϟ | ꙕ | ꭖ | [ꭖ, ꭖ] | [ꭖ, ꭖ, ꭖ] | [ꭖ, ꭖ, ꭖ, ꭖ]
 
-const loc: unique symbol = Symbol('locations')
-
-export class WGL extends With<Context> {
-	context: Context
+export class WGL extends With<WebGL2RenderingContext> {
+	context: WebGL2RenderingContext
 
 	constructor(target: HTMLCanvasElement, options: WebGLContextAttributes = {}) {
 		const context = target.getContext('webgl2', {
@@ -21,6 +19,37 @@ export class WGL extends With<Context> {
 
 		super(context)
 		this.context = context
+	}
+
+	parse = (source: Ϟ): ꝛ<Ϟ, Program> => {
+		const
+			types = { V: 'vertex', F: 'fragment' },
+			programs: ꝛ<Ϟ, { vertex?: Ϟ, fragment?: Ϟ }> = {},
+			sections = ('\n' + source)
+				.split(/\n(?=\/\/\/[CVF]\/[a-z]+)/)
+				.filter(s => s)
+
+		let common = ''
+
+		for (let section of sections) {
+			const [type, name] = section
+				.match(/^\/{3}([CVF]\/.+)/)[1]
+				.split('/')
+
+			if (type == 'C') {
+				common = section
+				continue
+			}
+
+			section = common + section
+
+			programs[name] ||= {}
+			programs[name][types[type]] = section
+		}
+
+		return programs.map(({ fragment, vertex = vertexes.normalized }) => {
+			return new Program(this.context, header + fragment, header + vertex)
+		})
 	}
 
 	quad() {
@@ -34,73 +63,38 @@ export class WGL extends With<Context> {
 		vertexAttribPointer(0, 2, UNSIGNED_BYTE, false, 0, 0)
 		bindBuffer(ARRAY_BUFFER, null)
 	}
-
-	parse(source: Ϟ): ꝛ<Ϟ, Program> {
-		const
-			types = { V: 'vertex', F: 'fragment' },
-			programs: ꝛ<Ϟ, { vertex?: Ϟ, fragment?: Ϟ }> = {},
-			sections = ('\n' + source)
-				.split('\n(?=\/\/[CVF]/[a-z]+)')
-				.filter(s => s)
-
-		let common = ''
-
-		for (let section of sections) {
-			const [type, name] =
-				section.match(/^\/\/(.+)/)[1].split('/')
-
-			if (type == 'C') {
-				common = section
-				continue
-			}
-
-			section = common + section
-
-			programs[name] ||= {}
-			programs[name][types[type]] = section
-		}
-
-		return programs.map(({ vertex, fragment }) =>
-			new Program(this.context, fragment, vertex))
-	}
 }
 
-export class Program extends With<Context> {
-	static current: Program
+export class Program extends With<WebGL2RenderingContext> {
+	size: ԗ = [50, 50]
+	$buffer: WebGLFramebuffer
+	$program: WebGLProgram
+	$locations: ꝛ<Ϟ, WebGLUniformLocation> = {}
 
-	size: ԗ
-	fbo?: Framebuffer
-	instance: WebGLProgram
+	set buffer(fbo: WebGLFramebuffer) {
+		useProgram(this.$program)
 
-	readonly uniforms = new Proxy(
-		{ [loc]: {} } as ꝛ<Ϟ, Uniform> & { [loc]: ꝛ<Ϟ, Location> },
-		{
-			set(U, name: Ϟ, value: Uniform) {
-				U[loc][name] ||=
-					getUniformLocation(this.instance, name)
+		this.$buffer = fbo
+		bindFramebuffer(FRAMEBUFFER, fbo)
+	}
 
-				if (!U[loc][name]) {
-					console.error('uniform name not found', name)
-					return false
-				}
+	readonly uniforms = Proxy.writer.call(this,
+		(name, uniform) => this.flush(name, uniform))
 
-				return this.flush(U[loc][name], value)
-			}
-		})
-
-	constructor(context: Context, fragment: Ϟ, vertex?: Ϟ) {
+	constructor(context: WebGL2RenderingContext, fragment: Ϟ, vertex?: Ϟ) {
 		super(context)
-		this.instance = createProgram()
+		this.init(fragment, vertex)
+	}
 
-		vertex ||= defaults.header + defaults.vertex
-		fragment = defaults.header + fragment
+	init(fragment: Ϟ, vertex?: Ϟ) {
+		this.$program = createProgram()
 
 		const
 			fs = this.compile(FRAGMENT_SHADER, fragment),
 			vs = this.compile(VERTEX_SHADER, vertex)
 
 		if (vs && fs)
-			linkProgram(this.instance)
+			linkProgram(this.$program)
 	}
 
 	compile(type: GLenum, source: Ϟ) {
@@ -109,7 +103,7 @@ export class Program extends With<Context> {
 		compileShader(shader)
 
 		if (getShaderParameter(shader, COMPILE_STATUS)) {
-			attachShader(this.instance, shader)
+			attachShader(this.$program, shader)
 			return shader
 		}
 
@@ -126,43 +120,62 @@ export class Program extends With<Context> {
 			console.debug(lines)
 		}
 
-		console.error(error)
+		throw error
 	}
 
-	use() {
-		if (Program.current != this) {
-			Program.current = this
-			useProgram(this.instance)
-		}
-	}
+	flush(name: Ϟ, value: Uniform) {
+		const location = this.locate(name)
+		if (!location) return false
 
-	flush(location: Location, uniform: Uniform) {
-		this.use()
-
-		switch (typeof uniform) {
+		useProgram(this.$program)
+		switch (typeof value) {
 			case 'boolean':
 			case 'number':
-				uniform1f(location, +uniform)
+				uniform1f(location, +value)
 				break
 			case 'string':
-				uniform1i(location, +uniform)
+				uniform1i(location, +value)
 				break
 			case 'object':
-				if (Array.isArray(uniform)) {
-					uniform.length == 2
-						&& uniform2fv(location, uniform)
-					uniform.length == 3
-						&& uniform3fv(location, uniform)
-					uniform.length == 4
-						&& uniform4fv(location, uniform)
+				if (Array.isArray(value)) {
+					value.length == 2
+						&& uniform2fv(location, value)
+					value.length == 3
+						&& uniform3fv(location, value)
+					value.length == 4
+						&& uniform4fv(location, value)
 					break
 				}
 			default:
-				console.error('can\'t use uniform value', uniform)
+				console.error('can\'t use uniform value', value)
 				return false
 		}
 
 		return true
+	}
+
+	locate(name: Ϟ) {
+		const { $program, $locations } = this
+
+		$locations[name] ||=
+			getUniformLocation($program, name)
+
+		if (!$locations[name]) {
+			console.error('uniform name not found', name)
+			return false
+		}
+
+		return $locations[name]
+	}
+
+	draw() {
+		useProgram(this.$program)
+		bindFramebuffer(FRAMEBUFFER, this.$buffer)
+
+		viewport(0, 0, canvas.width, canvas.height)
+		console.log(0, 0, canvas.width, canvas.height)
+
+		drawArrays(TRIANGLE_STRIP, 0, 4)
 	}
 }
 
