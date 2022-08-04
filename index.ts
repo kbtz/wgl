@@ -47,7 +47,7 @@ export class WGL extends With<WebGL2RenderingContext> {
 			programs[name][types[type]] = section
 		}
 
-		return programs.map(({ fragment, vertex = vertexes.normalized }) => {
+		return map(programs, ({ fragment, vertex = vertexes.normalized }) => {
 			return new Program(this.context, header + fragment, header + vertex)
 		})
 	}
@@ -173,7 +173,6 @@ export class Program extends With<WebGL2RenderingContext> {
 		bindFramebuffer(FRAMEBUFFER, this.$buffer)
 
 		viewport(0, 0, canvas.width, canvas.height)
-		console.log(0, 0, canvas.width, canvas.height)
 
 		drawArrays(TRIANGLE_STRIP, 0, 4)
 	}
