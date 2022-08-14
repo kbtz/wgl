@@ -1,8 +1,10 @@
-import '@kbtz/hax/maps'
-import '@kbtz/hax/merge'
-import '@kbtz/hax/proxies'
+import 'hax/maps'
+import 'hax/merge'
+import 'hax/proxies'
+import 'hax/type'
+import { With } from 'hax/with'
 
-import { With } from '@kbtz/hax/with'
+import './gl-context'
 import { header, vertexes } from './defaults'
 
 type Uniform = Ϟ | ꙕ | ꭖ | [ꭖ, ꭖ] | [ꭖ, ꭖ, ꭖ] | [ꭖ, ꭖ, ꭖ, ꭖ]
@@ -15,25 +17,25 @@ export class WGL extends With<WebGL2RenderingContext> {
 			premultipliedAlpha: false,
 			preserveDrawingBuffer: true,
 			...options
-		})
+		})!
 
 		super(context)
 		this.context = context
 	}
 
-	parse = (source: Ϟ): ꝛ<Ϟ, Program> => {
+	parse = (source: Ϟ): ꝛ<Program> => {
 		const
 			types = { V: 'vertex', F: 'fragment' },
-			programs: ꝛ<Ϟ, { vertex?: Ϟ, fragment?: Ϟ }> = {},
+			programs: ꝛ<{ vertex?: Ϟ, fragment?: Ϟ }> = {},
 			sections = ('\n' + source)
-				.split(/\n(?=\/\/\/[CVF]\/[a-z]+)/)
-				.filter(s => s)
+				.split(/\n(?=\/{3}[CVF]\/[a-z]+)/)
+				.slice(1)
 
 		let common = ''
 
 		for (let section of sections) {
 			const [type, name] = section
-				.match(/^\/{3}([CVF]\/.+)/)[1]
+				.match(/^\/{3}([CVF]\/.+)/)![1]
 				.split('/')
 
 			if (type == 'C') {
@@ -47,9 +49,8 @@ export class WGL extends With<WebGL2RenderingContext> {
 			programs[name][types[type]] = section
 		}
 
-		return map(programs, ({ fragment, vertex = vertexes.normalized }) => {
-			return new Program(this.context, header + fragment, header + vertex)
-		})
+		return map(programs, ({ fragment, vertex = vertexes.normalized }) =>
+			new Program(this.context, header + fragment, header + vertex))
 	}
 
 	quad() {
@@ -69,7 +70,7 @@ export class Program extends With<WebGL2RenderingContext> {
 	size: ԗ = [50, 50]
 	$buffer: WebGLFramebuffer
 	$program: WebGLProgram
-	$locations: ꝛ<Ϟ, WebGLUniformLocation> = {}
+	$locations: ꝛ<WebGLUniformLocation> = {}
 
 	set buffer(fbo: WebGLFramebuffer) {
 		useProgram(this.$program)
@@ -79,7 +80,7 @@ export class Program extends With<WebGL2RenderingContext> {
 	}
 
 	readonly uniforms = Proxy.writer.call(this,
-		(name, uniform) => this.flush(name, uniform))
+		(name, uniform) => this.flush(name as Ϟ, uniform))
 
 	constructor(context: WebGL2RenderingContext, fragment: Ϟ, vertex?: Ϟ) {
 		super(context)

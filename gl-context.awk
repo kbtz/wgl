@@ -47,8 +47,6 @@ inside && $1 ~ "[[:alnum:]]+\\(" {
 END {
 	out = "export { }" nl "declare global {" nl
 
-	# NOTE skipping index zero, since it
-	# is an empty line for some reason
 	lines = asorti(uniq)
 	for(i = 1; i <= lines; i++)
 		out = out ts gensub(/;$/, "", 1, uniq[i]) nl
