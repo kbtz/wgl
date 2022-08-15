@@ -1,13 +1,4 @@
-import 'hax/maps'
-import 'hax/merge'
-import 'hax/proxies'
-import 'hax/type'
-import { With } from 'hax/with'
-
-import './gl-context'
-import { header, vertexes } from './defaults'
-
-type Uniform = Ϟ | ꙕ | ꭖ | [ꭖ, ꭖ] | [ꭖ, ꭖ, ꭖ] | [ꭖ, ꭖ, ꭖ, ꭖ]
+import { With, Uniform, defaults } from './util'
 
 export class WGL extends With<WebGL2RenderingContext> {
 	context: WebGL2RenderingContext
@@ -49,7 +40,8 @@ export class WGL extends With<WebGL2RenderingContext> {
 			programs[name][types[type]] = section
 		}
 
-		return map(programs, ({ fragment, vertex = vertexes.normalized }) =>
+		const { header, vertexes: { normalized } } = defaults
+		return map(programs, ({ fragment, vertex = normalized }) =>
 			new Program(this.context, header + fragment, header + vertex))
 	}
 

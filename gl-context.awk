@@ -3,9 +3,7 @@
 
 BEGIN {
 	wg = "WebGL"; rc = "RenderingContext"
-	nl = "\n"; ts = "\t"
 	"npm root -g" | getline modules
-	"dirname $(realpath $_)" | getline cwd
 
 	stat(modules "/typescript", tsdir)
 	if(tsdir["type"] != "directory") {
@@ -13,10 +11,7 @@ BEGIN {
 		exit -1
 	}
 
-	input = modules "/typescript/lib/lib.dom.d.ts"
-	output = cwd "/gl-globals.d.ts"
-
-	ARGV[ARGC++] = input
+	ARGV[ARGC++] = modules "/typescript/lib/lib.dom.d.ts"
 }
 
 $0 ~ "^declare var " wg 2 rc ": {" ||
@@ -45,12 +40,10 @@ inside && $1 ~ "[[:alnum:]]+\\(" {
 }
 
 END {
-	out = "export { }" nl "declare global {" nl
-
 	lines = asorti(uniq)
+	print "export default " wg 2 rc "\n"
+	print "declare global {"
 	for(i = 1; i <= lines; i++)
-		out = out ts gensub(/;$/, "", 1, uniq[i]) nl
-
-	out = out "}" nl
-	print out > output
+		print "\t" uniq[i]
+	print "}"
 }
