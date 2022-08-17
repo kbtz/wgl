@@ -1,5 +1,5 @@
 {
-	"extends": "../web/tsconfig.json",
+	"extends": "../tsconfig.json",
 	"files": [
 		"./gl-context.d.ts",
 		"./index.ts",

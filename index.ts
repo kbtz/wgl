@@ -1,4 +1,6 @@
-import { With, Uniform, defaults } from './util'
+export default WGL
+
+import { With, Uniform, parse, defaults } from 'wgl/util'
 
 export class WGL extends With<WebGL2RenderingContext> {
 	context: WebGL2RenderingContext
@@ -14,33 +16,11 @@ export class WGL extends With<WebGL2RenderingContext> {
 		this.context = context
 	}
 
-	parse = (source: Ϟ): ꝛ<Program> => {
+	programs = (source: Ϟ): ꝛ<Program> => {
 		const
-			types = { V: 'vertex', F: 'fragment' },
-			programs: ꝛ<{ vertex?: Ϟ, fragment?: Ϟ }> = {},
-			sections = ('\n' + source)
-				.split(/\n(?=\/{3}[CVF]\/[a-z]+)/)
-				.slice(1)
+			programs = parse(source),
+			{ header, vertexes: { normalized } } = defaults
 
-		let common = ''
-
-		for (let section of sections) {
-			const [type, name] = section
-				.match(/^\/{3}([CVF]\/.+)/)![1]
-				.split('/')
-
-			if (type == 'C') {
-				common = section
-				continue
-			}
-
-			section = common + section
-
-			programs[name] ||= {}
-			programs[name][types[type]] = section
-		}
-
-		const { header, vertexes: { normalized } } = defaults
 		return map(programs, ({ fragment, vertex = normalized }) =>
 			new Program(this.context, header + fragment, header + vertex))
 	}
