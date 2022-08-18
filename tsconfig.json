@@ -1,7 +1,7 @@
 {
 	"extends": "../tsconfig.json",
 	"files": [
-		"./gl-context.d.ts",
-		"./index.ts",
+		"wgl.d.ts",
+		"wgl.ts"
 	]
 }

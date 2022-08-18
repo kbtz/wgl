@@ -1,4 +1,3 @@
-import 'hax/type'
 import 'hax/maps'
 import 'hax/merge'
 import 'hax/proxies'
