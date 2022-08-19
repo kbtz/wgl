@@ -1,6 +1,6 @@
 import { With, Uniform, parse, defaults } from './util'
 
-export default class WGL extends With<WebGL2RenderingContext> {
+export class WGL extends With<WebGL2RenderingContext> {
 	context: WebGL2RenderingContext
 
 	constructor(target: HTMLCanvasElement, options: WebGLContextAttributes = {}) {
@@ -38,14 +38,15 @@ export default class WGL extends With<WebGL2RenderingContext> {
 
 export class Program extends With<WebGL2RenderingContext> {
 	size: ԗ = [50, 50]
-	#buffer: WebGLFramebuffer
-	#program: WebGLProgram
-	#locations: ꝛ<WebGLUniformLocation> = {}
 
+	program: WebGLProgram
+	locations: ꝛ<WebGLUniformLocation> = {}
+
+	_buffer: WebGLFramebuffer
 	set buffer(fbo: WebGLFramebuffer) {
-		useProgram(this.#program)
+		useProgram(this.program)
 
-		this.#buffer = fbo
+		this._buffer = fbo
 		bindFramebuffer(FRAMEBUFFER, fbo)
 	}
 
@@ -58,14 +59,14 @@ export class Program extends With<WebGL2RenderingContext> {
 	}
 
 	init(fragment: Ϟ, vertex?: Ϟ) {
-		this.#program = createProgram()
+		this.program = createProgram()
 
 		const
 			fs = this.compile(FRAGMENT_SHADER, fragment),
 			vs = this.compile(VERTEX_SHADER, vertex)
 
 		if (vs && fs)
-			linkProgram(this.#program)
+			linkProgram(this.program)
 	}
 
 	compile(type: GLenum, source: Ϟ) {
@@ -74,7 +75,7 @@ export class Program extends With<WebGL2RenderingContext> {
 		compileShader(shader)
 
 		if (getShaderParameter(shader, COMPILE_STATUS)) {
-			attachShader(this.#program, shader)
+			attachShader(this.program, shader)
 			return shader
 		}
 
@@ -98,7 +99,7 @@ export class Program extends With<WebGL2RenderingContext> {
 		const location = this.locate(name)
 		if (!location) return false
 
-		useProgram(this.#program)
+		useProgram(this.program)
 		switch (typeof value) {
 			case 'boolean':
 			case 'number':
@@ -126,20 +127,20 @@ export class Program extends With<WebGL2RenderingContext> {
 	}
 
 	locate(name: Ϟ) {
-		this.#locations[name] ||=
-			getUniformLocation(this.#program, name)
+		this.locations[name] ||=
+			getUniformLocation(this.program, name)
 
-		if (!this.#locations[name]) {
+		if (!this.locations[name]) {
 			console.error('uniform name not found', name)
 			return false
 		}
 
-		return this.#locations[name]
+		return this.locations[name]
 	}
 
 	draw() {
-		useProgram(this.#program)
-		bindFramebuffer(FRAMEBUFFER, this.#buffer)
+		useProgram(this.program)
+		bindFramebuffer(FRAMEBUFFER, this.buffer)
 
 		viewport(0, 0, canvas.width, canvas.height)
 
